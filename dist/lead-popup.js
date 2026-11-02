@@ -3,8 +3,8 @@
 const STORAGE_SUBMITTED_KEY = 'vyapaarwebs_lead_done';
 const STORAGE_SNOOZE_KEY = 'vyapaarwebs_popup_snooze';
 
-// Owner's notification email
-export const OWNER_NOTIFICATION_EMAIL = 'siddhujha2006@gmail.com';
+// Owner's FormSubmit endpoint token (linked directly to siddhujha2006@gmail.com)
+export const FORMSUBMIT_TOKEN = '28d87903e0efec836ded60e37fc57eee';
 
 // Auto-trigger delay: 10 seconds
 const AUTO_POPUP_DELAY_MS = 10000;
@@ -158,7 +158,7 @@ function dispatchBackgroundLeads(leadData) {
   try {
     const controller2 = new AbortController();
     const timer2 = setTimeout(() => controller2.abort(), 4000);
-    fetch(`https://formsubmit.co/ajax/${OWNER_NOTIFICATION_EMAIL}`, {
+    fetch(`https://formsubmit.co/ajax/${FORMSUBMIT_TOKEN}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
