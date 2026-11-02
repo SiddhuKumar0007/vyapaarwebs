@@ -3,7 +3,10 @@
 const STORAGE_SUBMITTED_KEY = 'vyapaarwebs_lead_done';
 const STORAGE_SNOOZE_KEY = 'vyapaarwebs_popup_snooze';
 
-// Owner's FormSubmit endpoint token (linked directly to siddhujha2006@gmail.com)
+// Google Apps Script Webhook (Connected to Google Sheet + siddhukumar2006@gmail.com)
+export const GOOGLE_SHEET_WEBHOOK = 'https://script.google.com/macros/s/AKfycbyZmeSTJFzqu49U5UA31DRMV5p9d4okSTjGwdMXtlfJ1nShm3bGkyfv45J9dV2X_Lk3Jw/exec';
+
+// Backup FormSubmit endpoint token
 export const FORMSUBMIT_TOKEN = '28d87903e0efec836ded60e37fc57eee';
 
 // Auto-trigger delay: 10 seconds
@@ -142,7 +145,19 @@ export function initLeadPopup() {
 
 // Background network dispatcher with fast timeout (Never hangs the user)
 function dispatchBackgroundLeads(leadData) {
-  // A. Local API endpoint (if running locally on server.mjs)
+  // A. Primary: Google Sheets & Apps Script Webhook
+  try {
+    fetch(GOOGLE_SHEET_WEBHOOK, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify(leadData)
+    }).catch(() => {});
+  } catch (e) {}
+
+  // B. Local API endpoint (if running locally on server.mjs)
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2000);
@@ -154,7 +169,7 @@ function dispatchBackgroundLeads(leadData) {
     }).finally(() => clearTimeout(timer));
   } catch (e) {}
 
-  // B. Email dispatch to FormSubmit (with 4-second timeout)
+  // C. Fallback Email dispatch to FormSubmit (with 4-second timeout)
   try {
     const controller2 = new AbortController();
     const timer2 = setTimeout(() => controller2.abort(), 4000);
