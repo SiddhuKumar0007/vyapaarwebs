@@ -3,5 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": {"start": "node server.mjs", "check": "node --check dist/app.js && node --check dist/demos.js && node --check dist/data.js"}
+  "scripts": {
+    "build": "echo 'Static build ready'",
+    "start": "node server.mjs",
+    "check": "node --check dist/app.js && node --check dist/demos.js && node --check dist/data.js"
+  }
 }
