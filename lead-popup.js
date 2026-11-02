@@ -1,12 +1,12 @@
-// Lead Capture Popup Modal & Automatic Email Delivery System for VyapaarWebs
+// Lead Capture Popup Modal & Automatic Delivery System for VyapaarWebs
 
 const STORAGE_SUBMITTED_KEY = 'vyapaarwebs_lead_done';
 const STORAGE_SNOOZE_KEY = 'vyapaarwebs_popup_snooze';
 
-// Owner's notification email where all leads are instantly delivered
-export const OWNER_NOTIFICATION_EMAIL = 'siddhukumar2006@gmail.com';
+// Owner's notification email
+export const OWNER_NOTIFICATION_EMAIL = 'siddhujha2006@gmail.com';
 
-// Auto-trigger delay: Exactly 10 seconds for everyone
+// Auto-trigger delay: 10 seconds
 const AUTO_POPUP_DELAY_MS = 10000;
 
 export function initLeadPopup() {
@@ -62,7 +62,8 @@ export function initLeadPopup() {
     triggerBtn.onclick = () => openPopup();
   }
 
-  form.addEventListener('submit', async (e) => {
+  // Handle Form Submission (Instant 100% non-blocking feedback)
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
     const submitBtn = form.querySelector('button[type="submit"]');
 
@@ -78,6 +79,7 @@ export function initLeadPopup() {
       return;
     }
 
+    // Quick visual button state
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<span>⏳ Submitting...</span>`;
 
@@ -91,42 +93,7 @@ export function initLeadPopup() {
       pageUrl: window.location.href
     };
 
-    // 1. Send instant email notification to Owner's Gmail via FormSubmit
-    try {
-      await fetch(`https://formsubmit.co/ajax/${OWNER_NOTIFICATION_EMAIL}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          _subject: `🔥 New Lead Alert: ${name} (${phone}) - VyapaarWebs`,
-          'Client Name': name,
-          'Phone / WhatsApp': phone,
-          'Email': email,
-          'Requirement': requirement || 'Website Consultation Request',
-          'Submission Date & Time': leadData.submittedAt,
-          'Website Page': leadData.pageUrl,
-          _template: 'table',
-          _captcha: 'false'
-        })
-      });
-    } catch (emailErr) {
-      console.warn('Email dispatch warning:', emailErr);
-    }
-
-    // 2. Save locally to /api/lead (leads.csv & leads.json)
-    try {
-      await fetch('/api/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leadData)
-      });
-    } catch (err) {
-      console.warn('Local storage warning:', err);
-    }
-
-    // 3. Keep local backup
+    // 1. Immediately backup to localStorage (instant, cannot fail)
     try {
       const localLeads = JSON.parse(localStorage.getItem('vyapaarwebs_all_leads') || '[]');
       localLeads.push(leadData);
@@ -135,32 +102,82 @@ export function initLeadPopup() {
 
     sessionStorage.setItem(STORAGE_SUBMITTED_KEY, 'true');
 
-    // Show success view inside modal
-    form.style.display = 'none';
-    resultBox.innerHTML = `
-      <div class="lead-success-content">
-        <div class="lead-success-icon">✓</div>
-        <h3>Shukriya, ${escapeHtml(name)}!</h3>
-        <p>Aapki request receive ho gayi hai aur notification humari team ko send ho chuka hai.</p>
-        <div class="lead-summary-card">
-          <div><strong>Phone:</strong> ${escapeHtml(phone)}</div>
-          <div><strong>Email:</strong> ${escapeHtml(email)}</div>
-        </div>
-        <p class="lead-timing-note">⚡ Humari team jald hi aapse contact karegi.</p>
-        <button class="button small primary" id="lead-done-btn" type="button">Close</button>
-      </div>
-    `;
-    resultBox.style.display = 'block';
+    // 2. Dispatch network sync in background with AbortController timeout (Never blocks UI!)
+    dispatchBackgroundLeads(leadData);
 
-    const doneBtn = document.getElementById('lead-done-btn');
-    if (doneBtn) doneBtn.onclick = closePopup;
-
+    // 3. Instant UI Transition (after 500ms smooth visual feedback, NEVER stuck!)
     setTimeout(() => {
-      if (dialog.open) closePopup();
-    }, 6000);
+      form.style.display = 'none';
+      resultBox.innerHTML = `
+        <div class="lead-success-content">
+          <div class="lead-success-icon">✓</div>
+          <h3>Shukriya, ${escapeHtml(name)}!</h3>
+          <p>Aapki request successfully receive ho gayi hai.</p>
+          <div class="lead-summary-card">
+            <div><strong>Phone:</strong> ${escapeHtml(phone)}</div>
+            <div><strong>Email:</strong> ${escapeHtml(email)}</div>
+          </div>
+          <p class="lead-timing-note">⚡ Humari team agle <strong>15 minute</strong> mein aapse contact karegi.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
+            <a href="https://wa.me/917838956429?text=${encodeURIComponent('Hello VyapaarWebs, I just submitted an enquiry on your website.\n\nName: ' + name + '\nPhone: ' + phone + '\nEmail: ' + email)}" target="_blank" rel="noopener" class="button ghost" style="font-size:12px;padding:10px;justify-content:center;">
+              <span>💬 Direct WhatsApp Par Baat Karein ↗</span>
+            </a>
+            <button class="button small primary" id="lead-done-btn" type="button">Close</button>
+          </div>
+        </div>
+      `;
+      resultBox.style.display = 'block';
+
+      const doneBtn = document.getElementById('lead-done-btn');
+      if (doneBtn) doneBtn.onclick = closePopup;
+
+      setTimeout(() => {
+        if (dialog.open) closePopup();
+      }, 7000);
+    }, 550);
   });
 
   checkAndScheduleAutoOpen();
+}
+
+// Background network dispatcher with fast timeout (Never hangs the user)
+function dispatchBackgroundLeads(leadData) {
+  // A. Local API endpoint (if running locally on server.mjs)
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(leadData),
+      signal: controller.signal
+    }).finally(() => clearTimeout(timer));
+  } catch (e) {}
+
+  // B. Email dispatch to FormSubmit (with 4-second timeout)
+  try {
+    const controller2 = new AbortController();
+    const timer2 = setTimeout(() => controller2.abort(), 4000);
+    fetch(`https://formsubmit.co/ajax/${OWNER_NOTIFICATION_EMAIL}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        _subject: `🔥 New Lead Alert: ${leadData.name} (${leadData.phone}) - VyapaarWebs`,
+        'Client Name': leadData.name,
+        'Phone / WhatsApp': leadData.phone,
+        'Email': leadData.email,
+        'Requirement': leadData.requirement,
+        'Submission Date & Time': leadData.submittedAt,
+        'Website Page': leadData.pageUrl,
+        _template: 'table',
+        _captcha: 'false'
+      }),
+      signal: controller2.signal
+    }).finally(() => clearTimeout(timer2));
+  } catch (e) {}
 }
 
 function escapeHtml(str) {
