@@ -1,7 +1,10 @@
+package.json
+package-lock.json
 server.mjs
 qa.mjs
 generate-demos.mjs
 leads.json
 leads.csv
+dist/
 .git
 .openai

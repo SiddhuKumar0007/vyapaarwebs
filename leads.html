@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VyapaarWebs - Leads Dashboard</title>
+  <link rel="icon" href="assets/logo.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #09090f; color: #f7f5f2; font-family: 'DM Sans', sans-serif; padding: 40px 20px; }
+    .leads-container { max-width: 1000px; margin: 0 auto; }
+    .leads-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+    .leads-header h1 { font-size: 28px; display: flex; align-items: center; gap: 12px; }
+    .leads-header h1 img { width: 36px; height: 36px; border-radius: 8px; }
+    .header-actions { display: flex; gap: 12px; }
+    .card { background: #141420; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    th { background: #181827; color: #d9b878; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    td { padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #d4d4de; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .phone-badge { color: #34d399; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+    .email-link { color: #a6a5b3; text-decoration: none; }
+    .email-link:hover { color: #fff; }
+    .time-badge { font-size: 12px; color: #7f7e91; }
+    .source-pill { background: rgba(139,92,246,0.15); color: #c4b5fd; font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(139,92,246,0.3); }
+    .empty-row { text-align: center; padding: 40px; color: #888796; }
+    .btn { padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.2); color: #fff; background: transparent; }
+    .btn.primary { background: #8b5cf6; border-color: #8b5cf6; }
+    .btn.primary:hover { background: #9c74ff; }
+    .btn.gold { background: #d9b878; color: #111; border-color: #d9b878; }
+    .btn.gold:hover { background: #e5cb96; }
+  </style>
+</head>
+<body>
+  <div class="leads-container">
+    <div class="leads-header">
+      <h1>
+        <img src="assets/logo.png" alt="Logo">
+        <span>VyapaarWebs Leads <small style="font-size:14px;color:#a6a5b3" id="lead-count"></small></span>
+      </h1>
+      <div class="header-actions">
+        <a href="/" class="btn">← Back to Site</a>
+        <a href="/api/leads/export" class="btn gold" download>📥 Download Excel (.CSV)</a>
+        <button onclick="loadLeads()" class="btn">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Phone / WhatsApp</th>
+            <th>Email</th>
+            <th>Date & Time</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody">
+          <tr><td colspan="6" class="empty-row">Loading leads...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    async function loadLeads() {
+      const tbody = document.getElementById('leads-tbody');
+      const countEl = document.getElementById('lead-count');
+      try {
+        const res = await fetch('/api/leads');
+        const data = await res.json();
+        if (!data.leads || data.leads.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-row">Abhi tak koi lead nahi aayi hai.</td></tr>';
+          countEl.textContent = '(0 leads)';
+          return;
+        }
+        countEl.textContent = `(${data.leads.length} total)`;
+        tbody.innerHTML = data.leads.map((lead, i) => `
+          <tr>
+            <td style="color:#666">${i + 1}</td>
+            <td><strong>${escapeHtml(lead.name || 'Anonymous')}</strong></td>
+            <td><a class="phone-badge" href="tel:${escapeHtml(lead.phone)}">📞 ${escapeHtml(lead.phone)}</a></td>
+            <td><a class="email-link" href="mailto:${escapeHtml(lead.email)}">${escapeHtml(lead.email || 'N/A')}</a></td>
+            <td class="time-badge">${escapeHtml(lead.submittedAt || new Date(lead.createdAt).toLocaleString('en-IN'))}</td>
+            <td><span class="source-pill">${escapeHtml(lead.source || 'Website')}</span></td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-row" style="color:#ef4444">Error loading leads.</td></tr>';
+      }
+    }
+    function escapeHtml(str) {
+      return String(str||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    loadLeads();
+  </script>
+</body>
+</html>
